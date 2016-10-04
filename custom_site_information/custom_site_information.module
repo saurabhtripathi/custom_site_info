@@ -1,0 +1,68 @@
+<?php
+
+/**
+ * @file
+ * Custom site information module.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function custom_site_information_menu() {
+  $items['page_json/%/%'] = array(
+    'title' => 'JSON node',
+    'description' => "Returns json object of node type page",
+    'page callback' => 'custom_site_information_json_node_page',
+    'page arguments' => array(1, 2),
+    // Access will be controlled by callback function.
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+/**
+ * Implemenets hook_form_FORM_ID_alter.
+ */
+function custom_site_information_form_system_site_information_settings_alter(&$form, &$form_state, $form_id) {
+  if (!empty(variable_get('siteapikey'))) {
+    $form['actions']['submit']['#value'] = 'Update Configuration';
+  }
+  // Added new field.
+  $form['site_api_key'] = array(
+    '#title'    => t('Site API Key'),
+    '#type'     => 'textfield',
+    '#default_value' => !empty(variable_get('siteapikey')) ? variable_get('siteapikey') : t('No API Key yet'),
+    '#required' => TRUE,
+  );
+  // Alter form submit text.
+  $form['actions']['submit']['#submit'][] = 'custom_site_information_new_submit';
+}
+
+/**
+ * Callback for new field submit.
+ */
+function custom_site_information_new_submit($form, &$form_state) {
+  if (isset($form_state['values']['site_api_key'])) {
+    variable_set('siteapikey', $form_state['values']['site_api_key']);
+    drupal_set_message(t("Site API Key has been saved with !siteapikey", array('!siteapikey' => $form_state['values']['site_api_key'])));
+  }
+}
+
+/**
+ * Callback for menu JSON node.
+ */
+function custom_site_information_json_node_page($apikey, $node_id) {
+  $node_exists = new EntityFieldQuery();
+  $result = $node_exists->entityCondition('entity_type', 'node')
+      ->entityCondition('bundle', 'page')
+      ->entityCondition('entity_id', $node_id)
+      ->execute();
+  // Check if node of type page and exists. And Api key is correct.
+  if (!empty($result['node']) && variable_get('siteapikey') == $apikey) {
+    $node_object = node_load($node_id);
+    drupal_json_output($node_object);
+  }
+  else {
+    drupal_access_denied();
+  }
+
+}

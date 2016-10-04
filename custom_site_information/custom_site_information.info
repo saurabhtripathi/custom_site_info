@@ -1,0 +1,4 @@
+name = custom_site_information
+description = Customization for site information form.
+package = custom
+core = 7.x
